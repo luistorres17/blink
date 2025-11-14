@@ -1,5 +1,5 @@
-#ifndef TASKS_H
-#define TASKS_H
+#ifndef APP_TASKS_H
+#define APP_TASKS_H
 
 /* ========= Constantes de la Aplicación ========= */
 
@@ -40,4 +40,13 @@ float adc_get_amplitud_volts(void); // <-- AÑADIDO
  */
 float adc_get_frecuencia_volts(void); // <-- AÑADIDO
 
-#endif // TASKS_H
+
+/**
+ * @brief Tarea de control principal (PID y Salida PWM).
+ *
+ * Lee los valores de los ADC (usando los getters) y ajusta
+ * la frecuencia (Período) y amplitud (Duty Cycle) del TIM1.
+ */
+void vTaskControlPWM(void *pvParameters);
+
+#endif // APP_TASKS_H

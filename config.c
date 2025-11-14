@@ -2,6 +2,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/adc.h>   // <-- AÑADIDO
 #include <libopencm3/stm32/dma.h>   // <-- AÑADIDO
+#include <libopencm3/stm32/timer.h> // Para timer_reset() y otrascle
 #include "config.h"
 
 /*
@@ -84,4 +85,57 @@ void adc_dma_init(void)
 	/* 4. Conectar ADC con DMA y arrancar */
 	adc_enable_dma(ADC1);
 	adc_start_conversion_regular(ADC1);
+}
+
+
+/**
+ * @brief Configura el TIM1 en modo PWM en el pin PA8.
+ */
+void pwm_setup(void)
+{
+	/* 1. Habilitar relojes para TIM1 y GPIOA (AFIO ya debe estar por GPIO) */
+	rcc_periph_clock_enable(RCC_TIM1);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_AFIO); // Necesario para funciones alternas
+
+	/* 2. Configurar PA8 como Salida de Función Alterna (Push-Pull) */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+
+	/* 3. Configuración básica del Timer (TIM1) */
+	timer_reset(TIM1);
+	timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, // Divisor de reloj
+		       TIM_CR1_CMS_EDGE,         // Alineado al borde
+		       TIM_CR1_DIR_UP);          // Conteo ascendente
+
+	/* * 4. Configuración de Frecuencia (Período)
+	 * Frecuencia deseada = 10 KHz (Requisito 3)
+	 * Reloj del Timer (APB2) = 72 MHz (por clock_setup)
+	 * Prescaler = 0 (divide por 1)
+	 *
+	 * Periodo (ARR) = (Reloj_Timer / Frecuencia) - 1
+	 * Periodo (ARR) = (72,000,000 / 10,000) - 1 = 7200 - 1 = 7199
+	 */
+	timer_set_prescaler(TIM1, 0); 
+	timer_set_period(TIM1, 7199);
+
+	/* 5. Configuración del Canal PWM (TIM1_CH1 en PA8) */
+	timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM1); // Modo PWM 1
+	timer_enable_oc_output(TIM1, TIM_OC1);        // Habilitar salida del canal 1
+	
+	/* * 6. Configuración del Ciclo de Trabajo (Amplitud)
+	 * Amplitud deseada = 2Vpp (Requisito 2)
+	 * Esto se traduce a un ciclo de trabajo. Asumamos 50% (2.5Vpp en una señal 
+     * de 0-5V, o 1.65Vpp en una de 0-3.3V). Para 2Vpp en 3.3V, necesitamos
+     * un duty cycle de (2.0 / 3.3) * 100 = ~60.6%
+	 * * CCR = (ARR + 1) * (DutyCycle / 100)
+	 * CCR = 7200 * (60.6 / 100) = 4363
+	 * * Empecemos con 50% (Amplitud = 3.3Vpp / 2 = 1.65Vpp)
+	 * CCR = 7200 * 0.50 = 3600
+	 */
+	timer_set_oc_value(TIM1, TIM_OC1, 3600); // 50% duty cycle inicial
+
+	/* 7. Habilitar el Timer */
+	timer_enable_break_main_output(TIM1); // Necesario para TIM1
+	timer_enable_counter(TIM1);
 }

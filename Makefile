@@ -4,7 +4,7 @@
 
 BINARY		= main
 # Añadimos config.c a la lista de archivos fuente
-SRCFILES	= main.c config.c tasks.c rtos/heap_4.c rtos/list.c rtos/port.c rtos/tasks.c rtos/opencm3.c
+SRCFILES	= main.c config.c app_tasks.c rtos/heap_4.c rtos/list.c rtos/port.c rtos/tasks.c rtos/opencm3.c rtos/queue.c
 LDSCRIPT	= stm32f103c8t6.ld
 
 # start: elf bin
